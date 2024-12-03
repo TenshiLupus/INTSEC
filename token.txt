@@ -1,0 +1,2 @@
+docker login -u ameseraph
+dckr_pat__3HnfTjonQ1unKkDI8Aw4bj0JRc
