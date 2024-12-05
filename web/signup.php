@@ -6,9 +6,9 @@ include 'db_connect.php';
 // function hashPassword($password) {
 //     return sha1($password);
 // }
-// Function to hash passwords with salt
-function hashPasswordWithSalt($password, $salt) {
-    return hash('sha256', $salt . $password); // 使用 SHA-256 生成哈希
+// Enhanced password hashing
+function hashPassword($password) {
+    return password_hash($password, PASSWORD_BCRYPT); // Use bcrypt with a default cost
 }
 // Function to generate a random salt
 function generateSalt() {
@@ -18,41 +18,41 @@ function generateSalt() {
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $login = $_POST['login'];
-    $email = $_POST['email'];
+	$login = htmlspecialchars($_POST['login'], ENT_QUOTES, 'UTF-8'); // Prevent XSS
+    $email = htmlspecialchars($_POST['email'], ENT_QUOTES, 'UTF-8'); // Prevent XSS
     $password = $_POST['password'];
     $password_confirm = $_POST['password_confirm'];
 
     // Validate passwords
     if ($password !== $password_confirm) {
         $error = "<p class=\"error\">Passwords do not match. Please try again.</p>";
-    } else {
-        // Check if the login or email already exists
-        
-        $sql = "SELECT id FROM users WHERE login = '" . $login . "' OR email = '" . $email . "'";
-				$result = $conn->query($sql);
+    } else {        
+         // Check if the login or email already exists using prepared statements
+		 $stmt = $conn->prepare("SELECT id FROM users WHERE login = ? OR email = ?");
+		 $stmt->bind_param("ss", $login, $email);
+		 $stmt->execute();
+		 $stmt->store_result();
+ 
+		 if ($stmt->num_rows > 0) {
+			 $error = "<p class=\"error\">Login or email already exists. Please choose a different one.</p>";
+		 } else {
+           // Insert into the users table
+		   $hashedPassword = hashPassword($password);
+		   $stmt = $conn->prepare("INSERT INTO users (login, email, pwhash) VALUES (?, ?, ?)");
+		   $stmt->bind_param("sss", $login, $email, $hashedPassword);
+		   $stmt->execute();
 
-				if ($result->num_rows > 0) {
-            $error = "<p class=\"error\">Login or email already exists. Please choose a different one.</p>";
-        } else {
-            // Insert into the users table
-			$salt = generateSalt();
-			$hashedPassword = hashPasswordWithSalt($password, $salt);
-			$pwhash = $salt . '$' . $hashedPassword;
-            //$pwhash = hashPassword($password);
-				    $sql = "INSERT INTO users (login, email, pwhash) VALUES ('" . $login . "', '" . $email . "', '" . $pwhash . "')";
-						$conn->query($sql);
+		   // Get the newly created user ID
+		   $user_id = $stmt->insert_id;
 
-            // Get the newly created user ID
-						$user_id = $conn->insert_id;
+		   // Insert into the userinfos table
+		   $stmt = $conn->prepare("INSERT INTO userinfos (userid, birthdate, location, bio, avatar) VALUES (?, '', '', '', '')");
+		   $stmt->bind_param("i", $user_id);
+		   $stmt->execute();
 
-            // Insert into the userinfos table
-            
-				    $sql = "INSERT INTO userinfos (userid, birthdate, location, bio, avatar) VALUES (" . $user_id . ", '', '', '', '')";
-						$conn->query($sql);
-
-            $error = "<p class=\"success\">Registration successful! You can now <a href='connexion.php'>log in</a>.</p>";
-        }
+		   $error = "<p class=\"success\">Registration successful! You can now <a href='connexion.php'>log in</a>.</p>";
+	   }
+	   $stmt->close();
     }
 }
 ?>
@@ -121,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 					      <?php echo $error; ?>
 					  <?php endif; ?>
 
-						<form method="POST" action="signup.php">
+						<form method="POST" action="signup.php" id="signup-form">
 								<!-- Login -->
 								<label for="login">Login:</label>
 								<input type="text" id="login" name="login" required>
@@ -147,5 +147,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 					</div>
 					</div>
 </body>
+
+ <!-- Client-Side Validation Script -->
+ <script>
+        document.getElementById("signup-form").addEventListener("submit", function(e) {
+            const password = document.getElementById("password").value;
+            const confirmPassword = document.getElementById("password_confirm").value;
+
+            const errors = [];
+
+            // Check password length
+            if (password.length < 8) {
+                errors.push("Password must be at least 8 characters long.");
+            }
+            // Check for uppercase letters
+            if (!/[A-Z]/.test(password)) {
+                errors.push("Password must include at least one uppercase letter.");
+            }
+            // Check for lowercase letters
+            if (!/[a-z]/.test(password)) {
+                errors.push("Password must include at least one lowercase letter.");
+            }
+            // Check for a number
+            if (!/\d/.test(password)) {
+                errors.push("Password must include at least one number.");
+            }
+            // Check for a special character
+            if (!/[\W_]/.test(password)) {
+                errors.push("Password must include at least one special character.");
+            }
+            // Confirm password matches
+            if (password !== confirmPassword) {
+                errors.push("Passwords do not match.");
+            }
+            if (errors.length > 0) {
+                e.preventDefault(); // Prevent form submission
+                alert(errors.join("\n")); // Display errors
+            }
+        });
+    </script>
 </html>
 
