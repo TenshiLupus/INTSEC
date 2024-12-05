@@ -7,5 +7,6 @@ COPY ./web/connexion.php /passoire/web/connexion.php
 COPY ./web/file_upload.php /passoire/web/file_upload.php
 COPY ./web/index.php /passoire/web/index.php
 COPY ./web/signup.php /passoire/web/signup.php
+COPY ./web/db_connection.php /passoire/web/db_connection.php
 COPY ./crypto-helper/server.js /passoire/crypto-helper/server.js
 COPY download.php /passoire/web/download.php

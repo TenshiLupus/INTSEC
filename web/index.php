@@ -49,7 +49,7 @@ ini_set('session.cookie_secure', 1);
 			$user_id = $_SESSION['user_id'];
 
 			// Fetch current user info from the database
-      		$sql = $conn->prepare("SELECT u.login, u.email, ui.birthdate, ui.location, ui.bio, ui.avatar FROM users u LEFT JOIN userinfos ui ON u.id = ui.userid WHERE u.id = ? ");
+      		$sql = $conn->prepare("SELECT u.login, u.email, ui.birthdate, ui.location, ui.bio, ui.avatar FROM users u LEFT JOIN userinfos ui ON u.id = ui.userid WHERE u.id = ?");
 
 			$sql->bind_param("i", $user_id);
 			$sql-execute();	
