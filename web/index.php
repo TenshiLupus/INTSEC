@@ -52,7 +52,7 @@ ini_set('session.cookie_secure', 1);
       		$sql = $conn->prepare("SELECT u.login, u.email, ui.birthdate, ui.location, ui.bio, ui.avatar FROM users u LEFT JOIN userinfos ui ON u.id = ui.userid WHERE u.id = ? ");
 
 			$sql->bind_param("i", $user_id);
-			$sql-execute();	
+			$sql->execute();	
 			// Execute query
 			$result = $sql->get_result();
 
@@ -62,7 +62,7 @@ ini_set('session.cookie_secure', 1);
 			} else {
 					echo "No results found.";
 			}
-			$sql-close();
+			$sql->close();
 		}
 		?>
 		
