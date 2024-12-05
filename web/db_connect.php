@@ -8,12 +8,17 @@ $password = getenv('DB_PASSWORD') ?: 'jonathan';
 
 $dsn = "mysql:host=$host;dbname=$dbname;charset=utf8mb4";
 try{
-    $conn = new PDO($dsn, $username, $password, '');
-    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); // Enable exceptions
-    $conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE,PDO::FETCH_ASSOC); // Fetch associative arrays
-    $conn->setAttribute(PDO::ATTR_EMULATE_PREPARES,false); // Use native prepared statements)
-     // Establish PDO connection
-    $pdo->beginTransaction();
+    
+
+    $pdoatts = [
+        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION, // Enable exceptions for errors
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,       // Fetch results as associative arrays
+        PDO::ATTR_EMULATE_PREPARES   => false,                  // Disable emulation for prepared statements
+    ];
+
+    $conn = new PDO($dsn, $username, $password, $pdoatts);
+
+    $conn->beginTransaction();
     
 
 }catch(PDOException $e) {
