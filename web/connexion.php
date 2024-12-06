@@ -15,17 +15,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Check if login and password are provided
     if (!empty($login) && !empty($password)) {
         // Fetch the user from the database
-        $sql = "SELECT id, pwhash FROM users WHERE login = \"" . $login . "\"";
-
-				// Execute query
-				$result = $conn->query($sql);
-
-				if ($result->num_rows > 0) {
-						// Fetch the first row of results into an array
-						$user = $result->fetch_assoc();
-				} else {
-						echo "No results found.";
-				}
+		$stmt = $conn->prepare('SELECT id, pwhash FROM users WHERE login = :login');
+		$stmt->bindParam(':login', $login, PDO::PARAM_STR);
+		$stmt->execute();
+		$user = $stmt->fetch(PDO::FETCH_ASSOC);
 
 				// If the user exists and the password matches
 //         if ($user && (sha1($password) == $user['pwhash'])) {
@@ -42,14 +35,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 //     } else {
 //         $error = 'Please fill in both fields.';
 //     }
-		if ($username && $password) {
+		if ($user && $password) {
 		try {
-		// 使用 PDO 连接数据库（需修改为你的数据库配置）
-			$pdo = new PDO('mysql:host=db;dbname=passoire', 'passoire', 'jonathan');
-			$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+		
 
 		// 使用参数化查询
-			$stmt = $pdo->prepare('SELECT id, pwhash FROM users WHERE login = :login');
+			$stmt = $conn->prepare('SELECT id, pwhash FROM users WHERE login = :login');
 			$stmt->bindParam(':login', $login, PDO::PARAM_STR);
 			$stmt->execute();
 			$user = $stmt->fetch(PDO::FETCH_ASSOC);

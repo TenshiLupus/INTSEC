@@ -11,5 +11,6 @@ COPY ./web/db_connect.php /passoire/web/db_connect.php
 COPY ./web/message_board.php /passoire/web/message_board.php
 COPY ./web/my_files.php /passoire/web/my_files.php
 COPY ./web/link.php /passoire/web/link.php
+COPY ./web/settings.php /passoire/web/settings.php
 COPY ./crypto-helper/server.js /passoire/crypto-helper/server.js
 COPY download.php /passoire/web/download.php
