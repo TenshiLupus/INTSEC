@@ -30,12 +30,12 @@ if (isset($_POST['delete']) && isset($_POST['file_id'])) {
         }
 
         // Delete the file entry from the database
-        $stmt = $pdo->prepare("DELETE FROM files WHERE id = :file_id AND ownerid = :user_id");
+        $stmt = $conn->prepare("DELETE FROM files WHERE id = :file_id AND ownerid = :user_id");
         $stmt->execute(['file_id' => $file_id, 'user_id' => $user_id]);
         
 		
         // Also delete from the links table
-        $stmt = $pdo->prepare("DELETE FROM links WHERE fileid = :file_id");
+        $stmt = $conn->prepare("DELETE FROM links WHERE fileid = :file_id");
         $stmt->execute(['file_id' => $file_id]);
         
 		
@@ -46,7 +46,7 @@ if (isset($_POST['delete']) && isset($_POST['file_id'])) {
 
 
 // Retrieve all files uploaded by the user
-$stmt = $pdo->prepare("SELECT f.id, f.path, f.type, f.date, f.ownerid, l.hash FROM files f JOIN links l ON f.id = l.fileid WHERE f.ownerid = :user_id");
+$stmt = $conn->prepare("SELECT f.id, f.path, f.type, f.date, f.ownerid, l.hash FROM files f JOIN links l ON f.id = l.fileid WHERE f.ownerid = :user_id");
 $stmt->execute(['user_id' => $user_id]);
 $files = $stmt->fetchAll();
 
