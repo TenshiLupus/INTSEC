@@ -5,8 +5,8 @@ services:
     build:
       dockerfile: Dockerfile
     ports:
-      - 80:80
-      - 32:32
+      - 8080:80
+      - 2222:22
       - 3002:3002
     environment:
       HOST: "localhost"

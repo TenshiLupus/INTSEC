@@ -8,56 +8,45 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_FILES['file']) && isset($_SESSION['user_id'])) {
         $ownerid = $_SESSION['user_id'];
         $file = $_FILES['file'];
-
-        // Validate file size
-        $maxFileSize = 10 * 1024 * 1024; // 10MB
-        if ($file['size'] > $maxFileSize) {
-            $error = "File size exceeds the limit of 10MB.";
-            exit;
-        }
+        
+            // Validate file size
+            $maxFileSize = 10 * 1024 * 1024; // 10MB
+            if ($file['size'] > $maxFileSize) {
+               $error = "File size exceeds the limit of 10MB.";
+               exit;
+            }
 
         // Handle file upload
         $uploadDir = 'uploads/';
-        // Sanitize file name
-        $fileName = preg_replace("/[^a-zA-Z0-9\-_\.]/", "_", basename($file['name']));
-        $uploadFile = $uploadDir . $fileName;
-      
+        $uploadFile = $uploadDir . basename($file['name']);
+
         // Check if the directory exists, if not create it
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0777, true);
         }
         //check file type
-        $finfo = new finfo(FILEINFO_MIME_TYPE);
-        $fileMimeType = $finfo->file($file['tmp_name']);
         $allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-        
-        if (!in_array($fileMimeType, $allowedTypes)) {
+        $fileType = mime_content_type($file['tmp_name']); // Get the MIME type
+        if (!in_array($fileType, $allowedTypes)) {
             $error = "Invalid file type. Only JPEG, PNG, and PDF files are allowed.";
             exit;
         }
-        
         if (move_uploaded_file($file['tmp_name'], $uploadFile)) {
             // Save file info to database
-            // Prepare SQL query with prepared statements
-            $sql = "INSERT INTO files (type, ownerid, date, path) VALUES (?, ?, NOW(), ?)";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("sis", $file['type'], $ownerid, $uploadFile);
-            $stmt->execute();
-
+            
+	          $sql = "INSERT INTO files (type, ownerid, date, path) VALUES ('" .  $file['type'] . "', " .  $ownerid . ", NOW(), '" .  $uploadFile . "')";
+	          $conn->query($sql);
              // Get the last inserted file ID
-			$file_id = $conn->insert_id;
+						$file_id = $conn->insert_id;
 
-			 // Generate a hash for the file
-             $hash = sha1($ownerid . basename($file['name']));
+				    // Generate the hash for the link table
+				    $hash = sha1($ownerid . basename($file['name']));
 
-			 // Insert file link into links table
-             $sql2 = "INSERT INTO links (fileid, secret, hash) VALUES (?, 0, ?)";
-             $stmt2 = $conn->prepare($sql2);
-             $stmt2->bind_param("is", $file_id, $hash);
-             $stmt2->execute();
+				    // Insert the file link into the links table
+	          $sql2 = "INSERT INTO links (fileid, secret, hash) VALUES (" . $file_id . ", 0, '" . $hash . "')";
+	          $conn->query($sql2);
 
             $message = "File uploaded successfully!";
-            chmod($uploadFile, 0644); // Set secure file permissions
         } else {
             $error = "Error uploading the file.";
         }
