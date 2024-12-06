@@ -34,8 +34,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $qr = $conn->prepare($sql);
         $qr->bindParam(':login', $login, PDO::PARAM_STR);
         $qr->bindParam(':email', $email, PDO::PARAM_STR);
-        $qr->execute();
-        
+         // Check for errors during execution
+       
+        $qr->fetch(PDO::FETCH_ASSOC);
+
         if ($qr->rowCount() > 0) {
             $error = "<p class=\"error\">Login or email already exists. Please choose a different one.</p>";
         } else {
@@ -51,7 +53,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $qr->bindParam(':login', $login, PDO::PARAM_STR);
             $qr->bindParam(':email', $email, PDO::PARAM_STR);
             $qr->bindParam(':pwhash', $pwhash, PDO::PARAM_STR);
-            $qr->execute();
+            if (!$qr->execute()) {
+                throw new Exception('Error inserting user into the database.');
+            }
+    
             // Get the newly created user ID
             $user_id = $conn->lastInsertId();
 
@@ -60,7 +65,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 			$sql = "INSERT INTO userinfos (userid, birthdate, location, bio, avatar) VALUES (:userid, NULL, '', '', '')";
             $qr = $conn->prepare($sql);
             $qr->bindParam(':userid', $user_id, PDO::PARAM_INT);
-            $qr->execute();
+              // Check for errors during execution
+            if (!$qr->execute()) {
+                throw new Exception('Error inserting user info into the database.');
+            }
 
             $error = "<p class=\"success\">Registration successful! You can now <a href='connexion.php'>log in</a>.</p>";
         }

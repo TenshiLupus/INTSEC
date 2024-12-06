@@ -34,17 +34,27 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if (move_uploaded_file($file['tmp_name'], $uploadFile)) {
             // Save file info to database
             
-	          $sql = "INSERT INTO files (type, ownerid, date, path) VALUES ('" .  $file['type'] . "', " .  $ownerid . ", NOW(), '" .  $uploadFile . "')";
-	          $conn->query($sql);
-             // Get the last inserted file ID
-						$file_id = $conn->insert_id;
+            // Insert file information into the `files` table
+            $sql = "INSERT INTO files (type, ownerid, date, path) VALUES (:type, :ownerid, NOW(), :path)";
+            $qr = $conn->prepare($sql);
+            $qr->bindParam(':type', $file['type'], PDO::PARAM_STR);
+            $qr->bindParam(':ownerid', $ownerid, PDO::PARAM_INT);
+            $qr->bindParam(':path', $uploadFile, PDO::PARAM_STR);
+            $qr->execute();
 
+            // Get the last inserted file ID
+            $file_id = $conn->lastInsertId();
 				    // Generate the hash for the link table
-				    $hash = sha1($ownerid . basename($file['name']));
+			$hash = sha1($ownerid . basename($file['name']));
 
-				    // Insert the file link into the links table
-	          $sql2 = "INSERT INTO links (fileid, secret, hash) VALUES (" . $file_id . ", 0, '" . $hash . "')";
-	          $conn->query($sql2);
+			 // Insert the file link into the `links` table
+             $sql2 = "INSERT INTO links (fileid, secret, hash) VALUES (:fileid, :secret, :hash)";
+             $qr = $conn->prepare($sql2);
+             $qr->bindParam(':fileid', $file_id, PDO::PARAM_INT);
+             $qr->bindValue(':secret', 0, PDO::PARAM_INT);
+             $qr->bindParam(':hash', $hash, PDO::PARAM_STR);
+             $qr->execute();
+
 
             $message = "File uploaded successfully!";
         } else {

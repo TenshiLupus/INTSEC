@@ -18,7 +18,7 @@ try{
 
     $conn = new PDO($dsn, $username, $password, $pdoatts);
 
-    $conn->beginTransaction();
+
     
 
 }catch(PDOException $e) {
