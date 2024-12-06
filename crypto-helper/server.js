@@ -7,7 +7,7 @@ const app = express();
 const port = 3002;
 const host = "localhost";
 
-// Middleware
+// Middleware to parse request body
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -31,72 +31,104 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal Server Error' });
 });
 
-// Hashing API
+// Hashing APIs
 app.post('/hash/:type', (req, res) => {
   const { type } = req.params;
   const { text } = req.body;
+  const allowedHashes = ['md5', 'sha1'];
 
-  const allowedHashes = ['md5', 'sha1', 'sha256'];
   if (!allowedHashes.includes(type)) {
-    return res.status(400).json({ error: "Invalid hash type. Use 'md5', 'sha1', or 'sha256'." });
+    return res.status(400).send({ error: "Invalid hash type. Use \"md5\" or \"sha1\"." });
   }
 
   try {
-    const hash = crypto.createHash(type).update(text, 'utf8').digest('hex');
+    const hash = crypto.createHash(type).update(text).digest('hex');
     res.json({ hash });
-  } catch (err) {
-    res.status(500).json({ error: 'Error generating hash' });
+  } catch (error) {
+    res.status(500).send({ error: error.message });
   }
 });
-
-// DES Encryption/Decryption (for legacy compatibility, not recommended for secure systems)
-app.post('/encrypt/des', (req, res) => {
-  const { text, key } = req.body;
-  try {
-    const cipher = crypto.createCipheriv('des-ecb', Buffer.from(key, 'hex'), null);
-    const encrypted = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()]).toString('base64');
-    res.json({ encrypted });
-  } catch (err) {
-    res.status(500).json({ error: 'Error encrypting data' });
-  }
-});
-
-app.post('/decrypt/des', (req, res) => {
-  const { text, key } = req.body;
-  try {
-    const decipher = crypto.createDecipheriv('des-ecb', Buffer.from(key, 'hex'), null);
-    const decrypted = Buffer.concat([decipher.update(Buffer.from(text, 'base64')), decipher.final()]).toString('utf8');
-    res.json({ decrypted });
-  } catch (err) {
-    res.status(500).json({ error: 'Error decrypting data' });
-  }
-});
-
-// AES Encryption/Decryption
+// AES Encryption API
 app.post('/encrypt/aes', (req, res) => {
   const { text, key } = req.body;
+
+  // Ensure the key is exactly 32 bytes for AES-256
+  if (key.length !== 32) {
+    return res.status(400).json({ error: 'Invalid key length. AES-256 requires a 32-byte key.' });
+  }
+
+  const iv = Buffer.alloc(16, 0); // Initialization vector (16 bytes for AES-256-CBC)
+
   try {
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv('aes-256-cbc', crypto.createHash('sha256').update(key).digest(), iv);
-    const encrypted = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()]).toString('base64');
-    res.json({ encrypted, iv: iv.toString('hex') });
-  } catch (err) {
-    res.status(500).json({ error: 'Error encrypting data' });
+    const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(key, 'utf-8'), iv);
+    let encrypted = cipher.update(text, 'utf8', 'base64');
+    encrypted += cipher.final('base64');
+    res.json({ encrypted });
+  } catch (error) {
+    res.status(500).send({ error: `Encryption failed: ${error.message}` });
   }
 });
 
+// AES Decryption API
 app.post('/decrypt/aes', (req, res) => {
-  const { text, key, iv } = req.body;
+  const { text, key } = req.body;
+
+  // Ensure the key is exactly 32 bytes for AES-256
+  if (key.length !== 32) {
+    return res.status(400).json({ error: 'Invalid key length. AES-256 requires a 32-byte key.' });
+  }
+
+  const iv = Buffer.alloc(16, 0); // Initialization vector (16 bytes for AES-256-CBC)
+
   try {
-    const decipher = crypto.createDecipheriv(
-      'aes-256-cbc',
-      crypto.createHash('sha256').update(key).digest(),
-      Buffer.from(iv, 'hex')
-    );
-    const decrypted = Buffer.concat([decipher.update(Buffer.from(text, 'base64')), decipher.final()]).toString('utf8');
+    const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(key, 'utf-8'), iv);
+    let decrypted = decipher.update(text, 'base64', 'utf8');
+    decrypted += decipher.final('utf8');
     res.json({ decrypted });
-  } catch (err) {
-    res.status(500).json({ error: 'Error decrypting data' });
+  } catch (error) {
+    res.status(500).send({ error: `Decryption failed: ${error.message}` });
+  }
+});
+
+// DES Encryption API
+app.post('/encrypt/des', (req, res) => {
+  try {
+    const { text, key } = req.body;
+
+    // Ensure the key is exactly 8 bytes (56 bits)
+    if (key.length !== 8) {
+      return res.status(400).send({ error: "Invalid key length for DES. Use an 8-byte key." });
+    }
+
+    // ECB mode does not use an IV
+    const cipher = crypto.createCipheriv('des-ecb', Buffer.from(key, 'utf8'), null);
+    let encrypted = cipher.update(text, 'utf8', 'base64');
+    encrypted += cipher.final('base64');
+
+    res.json({ encrypted });
+  } catch (error) {
+    res.status(500).json({ error: `Encryption failed: ${error.message}` });
+  }
+});
+
+// DES Decryption API
+app.post('/decrypt/des', (req, res) => {
+  try {
+    const { text, key } = req.body;
+
+    // Ensure the key is exactly 8 bytes (56 bits)
+    if (key.length !== 8) {
+      return res.status(400).send({ error: "Invalid key length for DES. Use an 8-byte key." });
+    }
+
+    // ECB mode does not use an IV
+    const decipher = crypto.createDecipheriv('des-ecb', Buffer.from(key, 'utf8'), null);
+    let decrypted = decipher.update(text, 'base64', 'utf8');
+    decrypted += decipher.final('utf8');
+
+    res.send({ decrypted });
+  } catch (error) {
+    res.status(500).send({ error: `Decryption failed: ${error.message}` });
   }
 });
 
