@@ -121,8 +121,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 					      <?php echo $error; ?>
 					  <?php endif; ?>
 
-						<form method="POST" action="signup.php">
-								<!-- Login -->
+					  <form method="POST" action="signup.php" id="signup-form">
+					  <!-- Login -->
 								<label for="login">Login:</label>
 								<input type="text" id="login" name="login" required>
 
@@ -147,5 +147,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 					</div>
 					</div>
 </body>
+<!-- Client-Side Validation Script -->
+<script>
+        document.getElementById("signup-form").addEventListener("submit", function(e) {
+            const password = document.getElementById("password").value;
+            const confirmPassword = document.getElementById("password_confirm").value;
+
+            const errors = [];
+
+            // Check password length
+            if (password.length < 8) {
+                errors.push("Password must be at least 8 characters long.");
+            }
+            // Check for uppercase letters
+            if (!/[A-Z]/.test(password)) {
+                errors.push("Password must include at least one uppercase letter.");
+            }
+            // Check for lowercase letters
+            if (!/[a-z]/.test(password)) {
+                errors.push("Password must include at least one lowercase letter.");
+            }
+            // Check for a number
+            if (!/\d/.test(password)) {
+                errors.push("Password must include at least one number.");
+            }
+            // Check for a special character
+            if (!/[\W_]/.test(password)) {
+                errors.push("Password must include at least one special character.");
+            }
+            // Confirm password matches
+            if (password !== confirmPassword) {
+                errors.push("Passwords do not match.");
+            }
+            if (errors.length > 0) {
+                e.preventDefault(); // Prevent form submission
+                alert(errors.join("\n")); // Display errors
+            }
+        });
+    </script>
 </html>
 
