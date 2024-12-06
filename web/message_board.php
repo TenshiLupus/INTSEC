@@ -15,18 +15,18 @@
 				    // Check if message content is not empty
 				    if (!empty($content)) {
 				        // Insert the new message into the database
-				        $sql = $conn->prepare("INSERT INTO messages (authorid, content, date) VALUES (?, ?, NOW())");
-				        $sql->bind_param("is", $user_id, $content);
-				        
-						$sql->execute();
+				        $qr = $conn->prepare("INSERT INTO messages (authorid, content, date) VALUES (:user_id, :content, NOW())");
+    					$qr->bindParam(':user_id', $user_id, PDO::PARAM_INT);
+            			$qr->bindParam(':content', $content, PDO::PARAM_STR);
 						
 						
-						$message = 'Message posted successfully!';
-						
-						$sql->close();
-				    } else {
-				        $error = 'Message content cannot be empty.';
-				    }
+					
+						if ($qr->execute()) {
+							$message = 'Message posted successfully!';
+						} else {
+							$error = 'Failed to post the message.';
+						}
+					}
 				} else {
 				    $error = 'You need to be logged in to post a message.';
 				}
@@ -37,32 +37,52 @@
 	$page = isset($_GET['page']) ? $_GET['page'] : 1;
 	$offset = ($page - 1) * $limit;
 
-	$fs = isset($_GET['filter']) && strlen($_GET['filter']) > 0
+	$fs = isset($_GET['filter']) && strlen($_GET['filter']) > 0;
 	// Fetch messages for the current page
 	$sql2 = $fs 
-		? "SELECT m.id, m.content, m.date, u.login, i.avatar FROM messages m JOIN users u ON m.authorid = u.id JOIN userinfos i ON u.id = i.userid WHERE u.login= ? ORDER BY date DESC, id DESC LIMIT ? OFFSET ?";
-		: "SELECT m.id, m.content, m.date, u.login, i.avatar FROM messages m JOIN users u ON m.authorid = u.id JOIN userinfos i ON u.id = i.userid ORDER BY date DESC, id DESC LIMIT ? OFFSET ?";
-	
-	$qr = $conn->prepare($sql2)
+	? "SELECT m.id, m.content, m.date, u.login, i.avatar FROM messages m 
+             JOIN users u ON m.authorid = u.id 
+             JOIN userinfos i ON u.id = i.userid 
+             WHERE u.login = :filter 
+             ORDER BY date DESC, id DESC 
+             LIMIT :limit OFFSET :offset"
+	: "SELECT m.id, m.content, m.date, u.login, i.avatar FROM messages m 
+             JOIN users u ON m.authorid = u.id 
+             JOIN userinfos i ON u.id = i.userid 
+             ORDER BY date DESC, id DESC 
+             LIMIT :limit OFFSET :offset";
+
+	$qr = $conn->prepare($sql2);
 	if($fs) {
-		$qr->bind_param('sii', $_GET['filter'], $limit, $offset);
+		$qr->bindParam(':filter', $filter, PDO::PARAM_STR);
+    	$qr->bindParam(':limit', $limit, PDO::PARAM_INT);
+   		$qr->bindParam(':offset', $offset, PDO::PARAM_INT);
 	} else {
-		$qr->bind_param('ii', $limit, $offset);
+		$qr->bindParam(':limit', $limit, PDO::PARAM_INT);
+		$qr->bindParam(':offset', $offset, PDO::PARAM_INT);
 	}
 	$qr->execute();
+
 	$messages = [];
-	$result = $qr->get_results();
-	
 	// Fetch all rows and store them in an array
-	while($row = $result->fetch_assoc()) {
-		$messages[] = $row;
-	}
-	$qr->close();
+	$messages = $qr->fetchAll(PDO::FETCH_ASSOC);
+	
+	// if ($result->num_rows > 0) {
+	// 	// Fetch all rows and store them in an array
+	// 	while($row = $result->fetch_assoc()) {
+	// 		$messages[] = $row;
+	// 	}
+	if(count($messages) > 0){
+		echo "contains messages";
+  	}else {
+		echo "No messages found.";
+  	}
 
+	$result = $conn->prepare("SELECT COUNT(*) as total FROM messages");
+	$result->execute();
 
-	$result = $conn->query("SELECT COUNT(*) as total FROM messages");
-	$row = $result->fetch_assoc();
-	$totalMessages = $row['total'];
+	$rows = $result->fetch(PDO::FETCH_ASSOC);
+	$totalMessages = $rows['total'];
 	$totalPages = ceil($totalMessages / $limit);
 ?>
 

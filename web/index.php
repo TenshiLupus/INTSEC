@@ -51,18 +51,17 @@ ini_set('session.cookie_secure', 1);
 			// Fetch current user info from the database
       		$sql = $conn->prepare("SELECT u.login, u.email, ui.birthdate, ui.location, ui.bio, ui.avatar FROM users u LEFT JOIN userinfos ui ON u.id = ui.userid WHERE u.id = ?");
 
-			$sql->bind_param("i", $user_id);
+			$sql->bindValue(1, $user_id,PDO::PARAM_INT);
 			$sql->execute();	
 			// Execute query
-			$result = $sql->get_result();
+			$result = $sql->fetchAll(PDO::FETCH_ASSOC);
 
-			if ($result->num_rows > 0) {
+			if (count($result) > 0) {
 					// Fetch the first row of results into an array
-					$user = $result->fetch_assoc();
+					$user = $result[0];
 			} else {
 					echo "No results found.";
 			}
-			$sql->close();
 		}
 		?>
 		
