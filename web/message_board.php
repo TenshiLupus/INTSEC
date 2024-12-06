@@ -15,10 +15,15 @@
 				    // Check if message content is not empty
 				    if (!empty($content)) {
 				        // Insert the new message into the database
-				        $sql = "INSERT INTO messages (authorid, content, date) VALUES ('" . $user_id . "', '" . $content . "', NOW())";
-				        $conn->query($sql);
+				        $sql = $conn->prepare("INSERT INTO messages (authorid, content, date) VALUES (?, ?, NOW())");
+				        $sql->bind_param("is", $user_id, $content);
 				        
-				        $message = 'Message posted successfully!';
+						$sql->execute();
+						
+						
+						$message = 'Message posted successfully!';
+						
+						$sql->close();
 				    } else {
 				        $error = 'Message content cannot be empty.';
 				    }
@@ -31,25 +36,30 @@
 	$limit = isset($_GET['limit']) ? $_GET['limit'] : 10; // Number of messages per page
 	$page = isset($_GET['page']) ? $_GET['page'] : 1;
 	$offset = ($page - 1) * $limit;
-	// Fetch messages for the current page
-	if(isset($_GET['filter']) && strlen($_GET['filter']) > 0) {
-		$sql2 = "SELECT m.id, m.content, m.date, u.login, i.avatar FROM messages m JOIN users u ON m.authorid = u.id JOIN userinfos i ON u.id = i.userid WHERE u.login='" . $_GET['filter'] . "' ORDER BY date DESC, id DESC LIMIT " . $limit . " OFFSET " . $offset . "";
-	} else {
-		$sql2 = "SELECT m.id, m.content, m.date, u.login, i.avatar FROM messages m JOIN users u ON m.authorid = u.id JOIN userinfos i ON u.id = i.userid ORDER BY date DESC, id DESC LIMIT " . $limit . " OFFSET " . $offset . "";
-	}
-	
-	$result = $conn->query($sql2);
-	$messages = [];
 
-	if ($result->num_rows > 0) {
-		  // Fetch all rows and store them in an array
-		  while($row = $result->fetch()) {
-		      $messages[] = $row;
-		  }
-	} else {
-		  echo "No messages found.";
-	}
+	$fs = isset($_GET['filter']) && strlen($_GET['filter']) > 0
+	// Fetch messages for the current page
+	$sql2 = $fs 
+		? "SELECT m.id, m.content, m.date, u.login, i.avatar FROM messages m JOIN users u ON m.authorid = u.id JOIN userinfos i ON u.id = i.userid WHERE u.login= ? ORDER BY date DESC, id DESC LIMIT ? OFFSET ?";
+		: "SELECT m.id, m.content, m.date, u.login, i.avatar FROM messages m JOIN users u ON m.authorid = u.id JOIN userinfos i ON u.id = i.userid ORDER BY date DESC, id DESC LIMIT ? OFFSET ?";
 	
+	$qr = $conn->prepare($sql2)
+	if($fs) {
+		$qr->bind_param('sii', $_GET['filter'], $limit, $offset);
+	} else {
+		$qr->bind_param('ii', $limit, $offset);
+	}
+	$qr->execute();
+	$messages = [];
+	$result = $qr->get_results();
+	
+	// Fetch all rows and store them in an array
+	while($row = $result->fetch_assoc()) {
+		$messages[] = $row;
+	}
+	$qr->close();
+
+
 	$result = $conn->query("SELECT COUNT(*) as total FROM messages");
 	$row = $result->fetch_assoc();
 	$totalMessages = $row['total'];
