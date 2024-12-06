@@ -29,10 +29,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         // Check if the login or email already exists
         
-        $sql = "SELECT id FROM users WHERE login = '" . $login . "' OR email = '" . $email . "'";
-				$result = $conn->query($sql);
-
-				if ($result->num_rows > 0) {
+        // Check if the login or email already exists
+        $sql = "SELECT id FROM users WHERE login = :login OR email = :email";
+        $qr = $conn->prepare($sql);
+        $qr->bindParam(':login', $login, PDO::PARAM_STR);
+        $qr->bindParam(':email', $email, PDO::PARAM_STR);
+        $qr->execute();
+        
+        if ($qr->rowCount() > 0) {
             $error = "<p class=\"error\">Login or email already exists. Please choose a different one.</p>";
         } else {
             // Insert into the users table
@@ -40,16 +44,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 			$hashedPassword = hashPasswordWithSalt($password, $salt);
 			$pwhash = $salt . '$' . $hashedPassword;
             //$pwhash = hashPassword($password);
-				    $sql = "INSERT INTO users (login, email, pwhash) VALUES ('" . $login . "', '" . $email . "', '" . $pwhash . "')";
-						$conn->query($sql);
 
+
+			$sql = "INSERT INTO users (login, email, pwhash) VALUES (:login, :email, :pwhash)";
+            $qr = $conn->prepare($sql);
+            $qr->bindParam(':login', $login, PDO::PARAM_STR);
+            $qr->bindParam(':email', $email, PDO::PARAM_STR);
+            $qr->bindParam(':pwhash', $pwhash, PDO::PARAM_STR);
+            $qr->execute();
             // Get the newly created user ID
-						$user_id = $conn->insert_id;
+            $user_id = $conn->lastInsertId();
 
             // Insert into the userinfos table
             
-				    $sql = "INSERT INTO userinfos (userid, birthdate, location, bio, avatar) VALUES (" . $user_id . ", '', '', '', '')";
-						$conn->query($sql);
+			$sql = "INSERT INTO userinfos (userid, birthdate, location, bio, avatar) VALUES (:userid, NULL, '', '', '')";
+            $qr = $conn->prepare($sql);
+            $qr->bindParam(':userid', $user_id, PDO::PARAM_INT);
+            $qr->execute();
 
             $error = "<p class=\"success\">Registration successful! You can now <a href='connexion.php'>log in</a>.</p>";
         }
