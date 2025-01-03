@@ -1,0 +1,8 @@
+Challenge 1.2
+
+This a simple file that was XOR encrypted. But you already know that since you can read this message.
+
+To reward you of your effort, here is a clue for the group project:
+Somewhere in the passoire docker image, there is a file encrypted with a similar method (albeit slightly harder to decrypt). A combination of known plaintext attack bruteforce and reverse engineering can help you. Of course it may be easier to decrypt the file of your own docker image during phase II first and think about how you can then decrypt a similar file hidden in the docker image of the other groups during phase III (encrypted with a different key).
+
+Good luck.

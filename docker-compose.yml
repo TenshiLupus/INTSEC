@@ -1,12 +1,5 @@
 services:
   intsec:
     #specifiy the name of the image here to avoid redownloading it evertime
-    image: ameseraph/su_group_29
-    build:
-      dockerfile: Dockerfile
-    ports:
-      - 80:80
-      - 22:22
-      - 3002:3002
-    environment:
-      HOST: "localhost"
+    image:  nharrand/scavenger-hunt:latest
+  
